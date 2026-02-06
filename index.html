@@ -135,10 +135,8 @@
           <span id="connDot" class="dot"></span>
           <span id="connText" class="font-semibold">Bağlantı: Bekleniyor</span>
         </span>
-        <button id="ledBtn"
-          class="rounded-full px-5 py-2.5 text-sm font-semibold transition"
-          style="background:#16a34a;color:white;">
-          LED AÇ
+        <button id="themeBtn" class="rounded-full px-5 py-2.5 text-sm font-semibold" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+          Açık Tema
         </button>
       </div>
     </header>
@@ -437,31 +435,6 @@ async function fetchTemperature() {
     initChart();
     fetchTemperature();
     setInterval(fetchTemperature, 5000); // her 5 saniye
-    //-------------------------------
-    //---------------------------------
-    let ledDurum = false;
-
-    document.getElementById('ledBtn').addEventListener('click', async () => {
-      ledDurum = !ledDurum;
-
-      const { error } = await db
-        .from('bilsemled')
-        .insert([{ led: ledDurum }]);
-
-      if (error) {
-        console.log('❌ Supabase LED hatası:', error.message);
-        alert('LED gönderilemedi');
-        return;
-  }
-
-      // Buton yazısı + renk
-      const btn = document.getElementById('ledBtn');
-      btn.textContent = ledDurum ? 'LED KAPAT' : 'LED AÇ';
-      btn.style.background = ledDurum ? '#dc2626' : '#16a34a';
-
-      console.log('✅ LED durumu Supabase’e gitti:', ledDurum);
-});
-
   </script>
 </body>
 </html>
