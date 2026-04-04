@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gezgin A.Ş. — Debug Mode</title>
+    <title>BİLSEM SERA PROJESİ</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-database-compat.js"></script>
@@ -14,169 +14,184 @@
             --primary: #ff8800;
             --primary-glow: rgba(255, 136, 0, 0.4);
             --bg: #050505;
-            --card: rgba(255, 255, 255, 0.03);
+            --card: rgba(20, 20, 20, 0.8);
             --text: #ddd;
             --border: #222;
+        }
+
+        body.light-mode {
+            --bg: #f5f5f5;
+            --card: #ffffff;
+            --text: #222;
+            --border: #ddd;
         }
 
         body {
             background-color: var(--bg);
             background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 40px 40px;
-            font-family: 'Segoe UI', sans-serif;
-            color: var(--text);
-            margin: 0; padding: 20px;
-            padding-bottom: 150px;
+            background-size: 30px 30px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text); margin: 0; padding-bottom: 120px; overflow-x: hidden;
         }
 
-        .main-wrapper {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            max-width: 1000px;
-            margin: 0 auto;
+        /* HEADER */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 25px; background: rgba(0,0,0,0.5); border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px); sticky; top: 0; z-index: 100;
         }
 
-        .container {
-            background: var(--card);
-            border: 2px solid var(--border);
-            padding: 20px;
-            border-radius: 12px;
-            transition: 0.3s;
-            position: relative;
-            min-height: 220px; /* Kartın çökmemesi için */
+        .logo-area h2 { color: var(--primary); margin: 0; font-size: 22px; letter-spacing: 1px; }
+
+        .conn-box { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 16px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #ff3333; position: relative; }
+        .status-dot.online { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+        .status-dot.online::after {
+            content: ''; position: absolute; width: 100%; height: 100%;
+            border-radius: 50%; background: inherit; animation: pulse 1.5s infinite;
         }
 
-        .container:hover {
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
+
+        .theme-btn { 
+            background: none; border: 1px solid var(--border); color: var(--text); 
+            cursor: pointer; padding: 8px; border-radius: 8px; font-size: 18px;
+        }
+
+        /* 2x2 GRID */
+        .grid-container {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 20px; padding: 20px; max-width: 1100px; margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 15px; padding: 20px; transition: 0.3s;
+            display: flex; flex-direction: column; overflow: hidden; /* Sağa taşmayı önler */
+        }
+
+        .card:hover {
             border-color: var(--primary);
-            box-shadow: 0 0 15px var(--primary-glow);
+            box-shadow: 0 0 20px var(--primary-glow);
         }
 
-        .nem-value { font-size: 42px; font-weight: bold; color: #fff; margin-bottom: 10px; }
-        
-        /* GRAFİK ALANI - KRİTİK NOKTA */
-        .chart-box { 
-            position: relative; 
-            height: 120px; 
-            width: 100%; 
-            background: rgba(0,0,0,0.2);
-            border-radius: 8px;
-            border: 1px dashed #333;
+        .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .unit-name { font-size: 12px; opacity: 0.6; font-weight: bold; }
+        .pump-label { font-size: 11px; display: flex; align-items: center; gap: 5px; }
+
+        .nem-big { font-size: 48px; font-weight: 800; margin-bottom: 10px; }
+        .nem-big small { font-size: 18px; color: var(--primary); margin-left: 4px; }
+
+        /* GRAFİK KUTUSU - TAŞMA ÇÖZÜMÜ */
+        .chart-wrapper {
+            position: relative; height: 120px; width: 100%;
+            background: rgba(0,0,0,0.1); border-radius: 10px; padding: 5px;
         }
 
-        /* DEBUG PENCERESİ */
-        #debug-console {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 100px;
-            background: #000; color: #0f0; font-family: monospace; font-size: 10px;
-            padding: 10px; overflow-y: auto; border-top: 2px solid #333; z-index: 9999;
+        /* ALT BAR */
+        .footer-info {
+            position: fixed; bottom: 0; width: 100%; background: var(--card);
+            border-top: 1px solid var(--border); padding: 15px;
+            display: flex; justify-content: space-around; font-size: 11px; font-weight: bold;
         }
-        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: #333; }
-        .active { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+
+        @media (max-width: 768px) { .grid-container { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-    <div style="text-align:center; margin-bottom:20px;">
-        <h2 style="color:var(--primary)">⚡ GEZGİN A.Ş. DASHBOARD</h2>
-        <p style="font-size:10px; opacity:0.5;">LGS.OS THEME V2.1 - DEBUG ACTIVE</p>
-    </div>
-
-    <div class="main-wrapper">
-        <div class="container">
-            <div style="display:flex; justify-content:space-between;"><span>UNIT_01</span> <div id="p1" class="dot"></div></div>
-            <div class="nem-value"><span id="n1">0</span><small style="font-size:14px">%</small></div>
-            <div class="chart-box"><canvas id="c1"></canvas></div>
+    <div class="header">
+        <div class="logo-area">
+            <h2>⚡ BİLSEM SERA PROJESİ</h2>
         </div>
-        <div class="container">
-            <div style="display:flex; justify-content:space-between;"><span>UNIT_02</span> <div id="p2" class="dot"></div></div>
-            <div class="nem-value"><span id="n2">0</span><small style="font-size:14px">%</small></div>
-            <div class="chart-box"><canvas id="c2"></canvas></div>
-        </div>
-        <div class="container">
-            <div style="display:flex; justify-content:space-between;"><span>UNIT_03</span> <div id="p3" class="dot"></div></div>
-            <div class="nem-value"><span id="n3">0</span><small style="font-size:14px">%</small></div>
-            <div class="chart-box"><canvas id="c3"></canvas></div>
-        </div>
-        <div class="container">
-            <div style="display:flex; justify-content:space-between;"><span>UNIT_04</span> <div id="p4" class="dot"></div></div>
-            <div class="nem-value"><span id="n4">0</span><small style="font-size:14px">%</small></div>
-            <div class="chart-box"><canvas id="c4"></canvas></div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div class="conn-box">
+                <div id="stat-dot" class="status-dot"></div>
+                <span id="stat-text">BAĞLANTI BEKLENİYOR...</span>
+            </div>
+            <button class="theme-btn" onclick="document.body.classList.toggle('light-mode')">🌓</button>
         </div>
     </div>
 
-    <div id="debug-console">--- SISTEM BASLATILDI ---<br></div>
+    <div class="grid-container">
+        <div class="card">
+            <div class="card-top"><span class="unit-name">ÜNİTE_01</span> <span class="pump-label">SU AKTARIMI <div id="p1" class="status-dot" style="width:8px; height:8px;"></div></span></div>
+            <div class="nem-big"><span id="n1">0</span><small>%</small></div>
+            <div class="chart-wrapper"><canvas id="c1"></canvas></div>
+        </div>
+        <div class="card">
+            <div class="card-top"><span class="unit-name">ÜNİTE_02</span> <span class="pump-label">SU AKTARIMI <div id="p2" class="status-dot" style="width:8px; height:8px;"></div></span></div>
+            <div class="nem-big"><span id="n2">0</span><small>%</small></div>
+            <div class="chart-wrapper"><canvas id="c2"></canvas></div>
+        </div>
+        <div class="card">
+            <div class="card-top"><span class="unit-name">ÜNİTE_03</span> <span class="pump-label">SU AKTARIMI <div id="p3" class="status-dot" style="width:8px; height:8px;"></div></span></div>
+            <div class="nem-big"><span id="n3">0</span><small>%</small></div>
+            <div class="chart-wrapper"><canvas id="c3"></canvas></div>
+        </div>
+        <div class="card">
+            <div class="card-top"><span class="unit-name">ÜNİTE_04</span> <span class="pump-label">SU AKTARIMI <div id="p4" class="status-dot" style="width:8px; height:8px;"></div></span></div>
+            <div class="nem-big"><span id="n4">0</span><small>%</small></div>
+            <div class="chart-wrapper"><canvas id="c4"></canvas></div>
+        </div>
+    </div>
+
+    <footer class="footer-info">
+        <div>DURUM: <span id="f-durum" style="color:var(--primary)">BEKLEMEDE</span></div>
+        <div>VERİ PAKETİ: <span id="f-paket" style="color:var(--primary)">0</span></div>
+        <div>SON GÜNCELLEME: <span id="f-zaman" style="color:var(--primary)">--:--:--</span></div>
+        <div>SİSTEM: <span style="color:var(--primary)">LGS.OS V2.2</span></div>
+    </footer>
 
     <script>
-        const logger = (msg) => {
-            const div = document.getElementById('debug-console');
-            div.innerHTML += `> ${new Date().toLocaleTimeString()}: ${msg}<br>`;
-            div.scrollTop = div.scrollHeight;
-        };
-
-        try {
-            const firebaseConfig = { databaseURL: "https://bilsem1717-60b7a-default-rtdb.europe-west1.firebasedatabase.app" };
-            firebase.initializeApp(firebaseConfig);
-            logger("Firebase Baglantisi Kuruldu.");
-        } catch(e) { logger("FIREBASE HATASI: " + e.message); }
+        const firebaseConfig = { databaseURL: "https://bilsem1717-60b7a-default-rtdb.europe-west1.firebasedatabase.app" };
+        firebase.initializeApp(firebaseConfig);
 
         const charts = {};
         const setupChart = (id) => {
-            try {
-                const ctx = document.getElementById(id);
-                if(!ctx) { logger(`Hata: ${id} canvas bulunamadi!`); return; }
-                
-                charts[id] = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: Array(20).fill(''),
-                        datasets: [{
-                            data: [],
-                            borderColor: '#ff8800',
-                            backgroundColor: 'rgba(255, 136, 0, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: false,
-                        plugins: { legend: { display: false } },
-                        scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } }
-                    }
-                });
-                logger(`Grafik ${id} basariyla olusturuldu.`);
-            } catch(e) { logger(`GRAFIK HATASI (${id}): ` + e.message); }
+            const ctx = document.getElementById(id).getContext('2d');
+            charts[id] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(20).fill(''),
+                    datasets: [{
+                        data: [], borderColor: '#ff8800', backgroundColor: 'rgba(255, 136, 0, 0.05)',
+                        fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } }
+                }
+            });
         };
 
-        // Grafikleri Baslat
         ['c1', 'c2', 'c3', 'c4'].forEach(id => setupChart(id));
 
+        let vSayac = 0;
         firebase.database().ref('/veriler').on('value', (snap) => {
             const data = snap.val();
-            if(!data) { logger("Veritabanindan bos veri dondu!"); return; }
-            
-            logger("Veri alindi: " + JSON.stringify(data));
+            if(!data) return;
+
+            vSayac++;
+            document.getElementById('stat-dot').className = 'status-dot online';
+            document.getElementById('stat-text').innerText = 'BAĞLANDI';
+            document.getElementById('f-durum').innerText = 'VERİ AKIYOR';
+            document.getElementById('f-paket').innerText = vSayac;
+            document.getElementById('f-zaman').innerText = new Date().toLocaleTimeString();
 
             for(let i=1; i<=4; i++) {
-                const nem = data[`nem${i}`] || 0;
-                const pompa = data[`pompa${i}`] || 0;
+                const n = data[`nem${i}`] || 0;
+                const p = data[`pompa${i}`] || 0;
 
-                // Arayuz Guncelle
-                document.getElementById(`n${i}`).innerText = nem;
-                document.getElementById(`p${i}`).className = pompa == 1 ? 'dot active' : 'dot';
+                document.getElementById(`n${i}`).innerText = n;
+                document.getElementById(`p${i}`).className = p == 1 ? 'status-dot online' : 'status-dot';
 
-                // Grafik Guncelle
-                const chart = charts[`c${i}`];
-                if(chart) {
-                    chart.data.datasets[0].data.push(nem);
-                    if(chart.data.datasets[0].data.length > 20) chart.data.datasets[0].data.shift();
-                    chart.update('none'); // Performans icin animasyonsuz guncelle
-                } else {
-                    logger(`Hata: charts['c${i}'] objesi bulunamadi!`);
-                }
+                const c = charts[`c${i}`];
+                c.data.datasets[0].data.push(n);
+                if(c.data.datasets[0].data.length > 20) c.data.datasets[0].data.shift();
+                c.update('none');
             }
         });
     </script>
