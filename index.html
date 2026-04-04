@@ -3,447 +3,240 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Arduino Sensör Dashboardu | RAM Bellek & Grafik</title>
+  <title>Gezgin A.Ş. | Neon Sera Dashboard</title>
 
-  <!-- Tailwind (zorunlu) -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <!-- FireBase (zorunlu) -->
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
-    /* ...tüm eski CSS aynen kalıyor... */
+    
     :root {
-      --bg-primary: #f8f9fa;
-      --bg-secondary: #ffffff;
-      --text-color: #212529;
-      --text-muted: #6c757d;
-      --border-color: #e9ecef;
-      --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      --accent: #007bff;
-      --good: #28a745;
-      --warn: #ffc107;
-      --bad: #dc3545;
-      --grid: rgba(0,0,0,0.08);
-    }
-
-    body.dark {
-      --bg-primary: #0f1115;
-      --bg-secondary: #171a21;
+      --bg-primary: #050608;
+      --bg-secondary: #0d1117;
       --text-color: #e8eaf0;
       --text-muted: #aab0bf;
-      --border-color: #2a2f3a;
-      --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-      --accent: #28a745;
-      --grid: rgba(255,255,255,0.10);
+      --border-neon: #00f3ff;
+      --neon-pink: #ff00ff;
+      --neon-green: #39ff14;
+      --neon-orange: #ff9d00;
+      --card-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
     }
 
-    html, body { height: 100%; }
     body {
-      font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family: 'Poppins', sans-serif;
       background: var(--bg-primary);
       color: var(--text-color);
-      transition: background-color .25s ease, color .25s ease;
+      overflow-x: hidden;
     }
 
-    .card {
+    /* Neon Kart Stili */
+    .neon-card {
       background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
+      border: 1px solid rgba(0, 243, 255, 0.3);
       box-shadow: var(--card-shadow);
-    }
-
-    .metric-value { font-weight: 800; letter-spacing: -0.02em; }
-
-    .bar {
-      height: 8px;
-      background: color-mix(in srgb, var(--border-color) 75%, transparent);
-      border-radius: 999px;
+      border-radius: 1.5rem;
+      transition: all 0.3s ease;
+      position: relative;
       overflow: hidden;
     }
-    .bar > div {
-      height: 100%;
-      width: 0%;
-      border-radius: 999px;
-      transition: width .25s ease;
+    .neon-card:hover {
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.5);
+      border-color: var(--border-neon);
     }
 
-    .dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 999px;
-      display: inline-block;
-      background: var(--bad);
-      box-shadow: 0 0 12px color-mix(in srgb, var(--bad) 60%, transparent);
-      vertical-align: middle;
-    }
-    .dot.on {
-      background: var(--good);
-      box-shadow: 0 0 12px color-mix(in srgb, var(--good) 70%, transparent);
-    }
+    /* Dinamik Renkler */
+    .text-neon-blue { color: var(--border-neon); text-shadow: 0 0 8px var(--border-neon); }
+    .text-neon-pink { color: var(--neon-pink); text-shadow: 0 0 8px var(--neon-pink); }
+    .text-neon-green { color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green); }
 
-    .temp-led {
-      width: 28px;
-      height: 28px;
-      border-radius: 999px;
-      display: inline-block;
-      background: #4b5563;
-      box-shadow: 0 0 0 transparent;
+    /* Pompa LED */
+    .pump-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #333; transition: all 0.3s;
+    }
+    .pump-dot.on {
+      background: var(--neon-green);
+      box-shadow: 0 0 15px var(--neon-green);
     }
 
-    .temp-normal { border-left: 6px solid var(--good); }
-    .temp-warm   { border-left: 6px solid var(--bad); }
-    .temp-cold   { border-left: 6px solid var(--accent); }
+    /* Progress Bar */
+    .neon-bar-bg { height: 8px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
+    .neon-bar-fill { height: 100%; width: 0%; transition: width 0.5s ease; box-shadow: 0 0 10px inherit; }
 
-    .temp-normal .temp-led { background: var(--good); box-shadow: 0 0 18px color-mix(in srgb, var(--good) 75%, transparent); }
-    .temp-warm   .temp-led { background: var(--bad);  box-shadow: 0 0 18px color-mix(in srgb, var(--bad) 75%, transparent); }
-    .temp-cold   .temp-led { background: var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 75%, transparent); }
+    /* Küçük Grafik Alanı */
+    .mini-chart-container { height: 120px; width: 100%; margin-top: 1rem; }
 
-    /* Chart canvas arkaplanı */
-    #sensorChart {
-      background: transparent;
+    /* Footer Sabitleme */
+    footer {
+      border-top: 1px solid rgba(0, 243, 255, 0.2);
+      background: rgba(13, 17, 23, 0.9);
+      backdrop-filter: blur(10px);
     }
-
-    .kbd {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-      background: color-mix(in srgb, var(--border-color) 70%, transparent);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 2px 8px;
-      font-size: 12px;
-      color: var(--text-color);
-    }
-
-    .muted { color: var(--text-muted); }
   </style>
 </head>
 
-<body class="dark">
-  <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+<body>
+  <div class="max-w-[1400px] mx-auto px-6 py-8 pb-32">
+    
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-12">
       <div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Arduino Sensör Dashboardu</h1>
-        <p class="muted mt-1 text-sm">Seri porttan gelen veriler FİreBase'de tutulur, son ölçümler grafikte gösterilir.</p>
+        <h1 class="text-3xl font-extrabold tracking-tight text-neon-blue">Arduino Sensör Dashboardu</h1>
+        <p class="text-muted mt-1 text-sm">Gezgin A.Ş. Akıllı Sera Operasyon Merkezi</p>
       </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <span id="connBadge" class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm border" style="border-color: var(--border-color); background: var(--bg-secondary);">
-          <span id="connDot" class="dot"></span>
-          <span id="connText" class="font-semibold">Bağlantı: Bekleniyor</span>
-        </span>
-        <button id="themeBtn" class="rounded-full px-5 py-2.5 text-sm font-semibold" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
-          Açık Tema
-        </button>
+      <div class="flex items-center gap-4">
+        <div id="connBadge" class="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-700 bg-black/50">
+          <div id="connDot" class="pump-dot"></div>
+          <span id="connText" class="text-xs font-bold uppercase tracking-widest">Bekleniyor</span>
+        </div>
       </div>
     </header>
 
-    <!-- Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <main class="lg:col-span-3">
-        <!-- Cards row -->
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <!-- Soil -->
-          <div class="card rounded-2xl p-6">
-            <div class="flex items-start justify-between">
-              <div>
-                <p class="text-xs font-bold tracking-widest uppercase muted">Toprak Nemi</p>
-                <div class="metric-value text-4xl mt-2" id="soilText">0%</div>
-              </div>
-              <div class="text-sm font-semibold" style="color: var(--accent);">%</div>
-            </div>
-            <div class="bar mt-4">
-              <div id="soilBar" style="background: var(--good);"></div>
-            </div>
-            <div class="mt-4 flex items-center gap-3">
-              <span id="pumpDot" class="dot"></span>
-              <div class="text-sm font-semibold" id="pumpText">Pompa Kapalı</div>
-            </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+      
+      <div class="neon-card p-6 flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-lg uppercase tracking-wider">Saksı 01</h3>
+          <div class="flex items-center gap-2">
+            <div id="p1-dot" class="pump-dot"></div>
+            <span class="text-[10px] font-bold text-muted uppercase">PUMP</span>
           </div>
+        </div>
+        <div class="text-4xl font-black text-neon-blue mb-2" id="n1-text">0%</div>
+        <div class="neon-bar-bg mb-4">
+          <div id="n1-bar" class="neon-bar-fill" style="background: var(--border-neon);"></div>
+        </div>
+        <div class="mini-chart-container">
+          <canvas id="chart1"></canvas>
+        </div>
+      </div>
 
-          <!-- Pot -->
-          <div class="card rounded-2xl p-6">
-            <p class="text-xs font-bold tracking-widest uppercase muted">Potansiyometre</p>
-            <div class="metric-value text-4xl mt-2" id="potText">0</div>
-            <div class="bar mt-4">
-              <div id="potBar" style="background: var(--warn);"></div>
-            </div>
-            <div class="mt-3 text-xs muted">Aralık: 0–1023</div>
+      <div class="neon-card p-6 flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-lg uppercase tracking-wider">Saksı 02</h3>
+          <div class="flex items-center gap-2">
+            <div id="p2-dot" class="pump-dot"></div>
+            <span class="text-[10px] font-bold text-muted uppercase">PUMP</span>
           </div>
+        </div>
+        <div class="text-4xl font-black text-neon-pink mb-2" id="n2-text">0%</div>
+        <div class="neon-bar-bg mb-4">
+          <div id="n2-bar" class="neon-bar-fill" style="background: var(--neon-pink);"></div>
+        </div>
+        <div class="mini-chart-container">
+          <canvas id="chart2"></canvas>
+        </div>
+      </div>
 
-          <!-- Temp -->
-          <div class="card rounded-2xl p-6 temp-normal" id="tempCard">
-            <p class="text-xs font-bold tracking-widest uppercase muted">Sıcaklık</p>
-            <div class="metric-value text-4xl mt-2" id="tempText">0.0°C</div>
-            <div class="mt-4 flex items-center justify-between">
-              <div>
-                <div class="text-sm font-semibold">Durum: <span id="tempStatus">Normal</span></div>
-                <div class="text-xs muted mt-1">Soğuk &lt; 15°C · Normal 15–27°C · Sıcak &gt; 27°C</div>
-              </div>
-              <span class="temp-led" id="tempLed" aria-label="Sıcaklık LED"></span>
-            </div>
+      <div class="neon-card p-6 flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-lg uppercase tracking-wider">Saksı 03</h3>
+          <div class="flex items-center gap-2">
+            <div id="p3-dot" class="pump-dot"></div>
+            <span class="text-[10px] font-bold text-muted uppercase">PUMP</span>
           </div>
-        </section>
+        </div>
+        <div class="text-4xl font-black text-neon-green mb-2" id="n3-text">0%</div>
+        <div class="neon-bar-bg mb-4">
+          <div id="n3-bar" class="neon-bar-fill" style="background: var(--neon-green);"></div>
+        </div>
+        <div class="mini-chart-container">
+          <canvas id="chart3"></canvas>
+        </div>
+      </div>
 
-        <!-- Chart -->
-        <section class="card rounded-2xl p-6">
-          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
-            <div>
-              <p class="text-xs font-bold tracking-widest uppercase muted">Tüm Sensör Verileri Geçmişi</p>
-              <h2 class="text-lg font-bold">Son <span id="visiblePoints">20</span> ölçüm grafikte (SupaBase'de daha fazlası tutulur)</h2>
-            </div>
+      <div class="neon-card p-6 flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-lg uppercase tracking-wider">Saksı 04</h3>
+          <div class="flex items-center gap-2">
+            <div id="p4-dot" class="pump-dot"></div>
+            <span class="text-[10px] font-bold text-muted uppercase">PUMP</span>
           </div>
-          <div class="h-[380px]">
-            <canvas id="sensorChart"></canvas>
-          </div>
-        </section>
+        </div>
+        <div class="text-4xl font-black text-neon-orange mb-2" id="n4-text">0%</div>
+        <div class="neon-bar-bg mb-4">
+          <div id="n4-bar" class="neon-bar-fill" style="background: var(--neon-orange);"></div>
+        </div>
+        <div class="mini-chart-container">
+          <canvas id="chart4"></canvas>
+        </div>
+      </div>
 
-        <!-- Seri Port Notları -->
-        <section class="mt-6">
-          <details class="card rounded-2xl p-5">
-            <summary class="cursor-pointer font-semibold">Seri Port Notları (okuma & format)</summary>
-            <div class="mt-3 text-sm muted leading-relaxed">
-              <ul class="list-disc pl-5">
-                <li>Demo modunda sıcaklık, nem, pot ve pump verileri çalışır.</li>
-                <li>Supabase’den sıcaklık (`sic`) verisi alınır.</li>
-              </ul>
-            </div>
-          </details>
-        </section>
-      </main>
-
-      <!-- Sidebar -->
-      <aside class="lg:col-span-1 flex flex-col gap-6">
-        <section class="card rounded-2xl p-6">
-          <p class="text-xs font-bold tracking-widest uppercase muted">Tahmin / Prognoz</p>
-          <div class="metric-value text-2xl mt-2" id="predictionText">BERRAK Bekleniyor...</div>
-          <p class="text-sm muted mt-2">Sıcaklık verisine göre basit eğilim sınıflandırması yapılır.</p>
-        </section>
-
-        <section class="card rounded-2xl p-6">
-          <p class="text-xs font-bold tracking-widest uppercase muted">Sistem Özeti</p>
-          <ul class="mt-3 space-y-3 text-sm">
-            <li class="flex items-center justify-between">
-              <span class="muted">Geçmiş Veri (SupaBase)</span>
-              <span class="font-semibold"><span id="ramCount">0</span> nokta</span>
-            </li>
-            <li class="flex items-center justify-between">
-              <span class="muted">Grafikte Gösterilen</span>
-              <span class="font-semibold"><span id="visibleCount">0</span> nokta</span>
-            </li>
-            <li class="flex items-center justify-between">
-              <span class="muted">Son Güncelleme</span>
-              <span class="font-semibold" id="lastUpdate">—</span>
-            </li>
-            <li class="flex items-center justify-between">
-              <span class="muted">Pompa Kontrol</span>
-              <span class="font-semibold">Harici</span>
-            </li>
-          </ul>
-        </section>
-
-        <section class="card rounded-2xl p-6">
-          <p class="text-xs font-bold tracking-widest uppercase muted">RAM Limiti</p>
-          <p class="text-sm mt-2">
-            Maks. <strong id="maxRam">50000</strong> nokta (koruma amaçlı). Bu sayıyı aşarsa en eski veriler silinir.
-          </p>
-          <p class="text-xs muted mt-2">Not: Gerçek bellek kullanımı tarayıcıya ve veri yapısına göre değişir.</p>
-        </section>
-      </aside>
     </div>
   </div>
 
+  <footer class="fixed bottom-0 left-0 w-full p-4 z-50">
+    <div class="max-w-[1400px] mx-auto flex flex-wrap justify-center gap-8 text-[11px] font-bold uppercase tracking-[0.2em] text-muted">
+      <div class="flex items-center gap-2"><span class="text-neon-blue">●</span> Bağlantı: <span id="f-conn" class="text-white">Çevrimdışı</span></div>
+      <div class="flex items-center gap-2"><span class="text-neon-pink">●</span> Gelen Veri: <span id="f-count" class="text-white">0</span></div>
+      <div class="flex items-center gap-2"><span class="text-neon-green">●</span> Son Güncelleme: <span id="f-time" class="text-white">—</span></div>
+      <div class="flex items-center gap-2"><span class="text-neon-orange">●</span> Sistem: <span class="text-white">V2 NEON</span></div>
+    </div>
+  </footer>
+
   <script>
-    // -----------------------------
-    // Firebase Ayarları
-    // -----------------------------
+    // Firebase Config
     const firebaseConfig = {
       databaseURL: "https://bilsem1717-60b7a-default-rtdb.europe-west1.firebasedatabase.app"
     };
-
-    // Firebase Başlatma ve Hata Kontrolü
-    try {
-      firebase.initializeApp(firebaseConfig);
-    } catch (err) {
-      alert("Firebase Başlatılamadı! Hata: " + err.message);
-    }
-
+    firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // -----------------------------
-    // Temel Ayarlar
-    // -----------------------------
-    const CHART_VISIBLE_POINTS = 20;
-    const MAX_RAM_POINTS = 50000;
+    const charts = {};
+    const chartConfigs = [
+      { id: 'chart1', color: '#00f3ff' },
+      { id: 'chart2', color: '#ff00ff' },
+      { id: 'chart3', color: '#39ff14' },
+      { id: 'chart4', color: '#ff9d00' }
+    ];
 
-    let sensorHistory = [];
-    let chart = null;
-    let totalDataCount = 0; // Eskiden totalSupabaseCount idi
-
-    const el = (id) => document.getElementById(id);
-
-    // Dashboard üzerindeki sabitleri yazdıralım
-    if (el('visiblePoints')) el('visiblePoints').textContent = CHART_VISIBLE_POINTS;
-    if (el('maxRam')) el('maxRam').textContent = MAX_RAM_POINTS;
-
-    // -----------------------------
-    // Chart Başlangıç
-    // -----------------------------
-    function chartTheme() {
-      const isDark = document.body.classList.contains('dark');
-      return {
-        tick: isDark ? '#e8eaf0' : '#111827',
-        grid: getComputedStyle(document.body).getPropertyValue('--grid').trim() || (isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)')
-      };
-    }
-
-    function initChart() {
-      const ctx = el('sensorChart').getContext('2d');
-      const t = chartTheme();
-      chart = new Chart(ctx, {
+    // Grafikleri Başlat
+    chartConfigs.forEach(conf => {
+      const ctx = document.getElementById(conf.id).getContext('2d');
+      charts[conf.id] = new Chart(ctx, {
         type: 'line',
-        data: {
-          labels: [],
-          datasets: [
-            { label: 'Sıcaklık (°C)', data: [], borderColor: '#dc3545', backgroundColor: 'transparent', tension: 0.35, pointRadius: 0, yAxisID: 'yTemp' },
-            { label: 'Nem (%)', data: [], borderColor: '#007bff', backgroundColor: 'transparent', tension: 0.35, pointRadius: 0, yAxisID: 'yHum' },
-            { label: 'Pot (0-1023)', data: [], borderColor: '#ffc107', backgroundColor: 'transparent', tension: 0.35, pointRadius: 0, yAxisID: 'yPot' }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: false,
-          plugins: { legend: { labels: { color: t.tick } }, tooltip: { mode: 'index', intersect: false } },
-          interaction: { mode: 'index', intersect: false },
-          scales: {
-            x: { ticks: { color: t.tick }, grid: { color: t.grid }, title: { display: true, text: 'Zaman', color: t.tick } },
-            yTemp: { position: 'left', ticks: { color: t.tick }, grid: { color: t.grid }, title: { display: true, text: '°C', color: t.tick } },
-            yHum: { position: 'right', min:0, max:100, ticks: { color: t.tick }, grid: { drawOnChartArea:false }, title: { display:true, text:'%', color:t.tick } },
-            yPot: { position: 'right', min:0, max:1023, offset:true, ticks:{color:t.tick}, grid:{drawOnChartArea:false}, title:{display:true, text:'0-1023', color:t.tick} }
-          }
+        data: { labels: Array(15).fill(''), datasets: [{ data: [], borderColor: conf.color, tension: 0.4, pointRadius: 0, borderWidth: 2 }] },
+        options: { 
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { display: false } },
+          scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } }
         }
       });
-    }
-
-    function applyChartTheme() {
-      if (!chart) return;
-      const t = chartTheme();
-      chart.options.plugins.legend.labels.color = t.tick;
-      chart.options.scales.x.ticks.color = t.tick;
-      chart.options.scales.x.grid.color = t.grid;
-      chart.options.scales.x.title.color = t.tick;
-      chart.options.scales.yTemp.ticks.color = t.tick;
-      chart.options.scales.yTemp.grid.color = t.grid;
-      chart.options.scales.yTemp.title.color = t.tick;
-      chart.options.scales.yHum.ticks.color = t.tick;
-      chart.options.scales.yHum.title.color = t.tick;
-      chart.options.scales.yPot.ticks.color = t.tick;
-      chart.options.scales.yPot.title.color = t.tick;
-      chart.update('none');
-    }
-
-    function updateChart() {
-      if (!chart) return;
-      const latest = sensorHistory.slice(-CHART_VISIBLE_POINTS);
-      chart.data.labels = latest.map((_,i) => '');
-      chart.data.datasets[0].data = latest.map(d => d.sic);
-      chart.data.datasets[1].data = latest.map(d => d.nem);
-      chart.data.datasets[2].data = latest.map(d => d.pot);
-      chart.update('none');
-      
-      if (el('visibleCount')) el('visibleCount').textContent = latest.length;
-      if (el('ramCount')) el('ramCount').textContent = totalDataCount;
-    }
-
-    // -----------------------------
-    // Firebase Canlı Veri Çekme (Realtime)
-    // -----------------------------
-    function startRealtimeUpdates() {
-      // '/veriler' düğümünü canlı olarak dinliyoruz
-      const dataRef = database.ref('/veriler');
-      
-      dataRef.on('value', (snapshot) => {
-        const row = snapshot.val();
-        
-        if (row) {
-          totalDataCount++; // Her yeni veri geldiğinde sayacı artır (tablo işlevi için)
-          
-          // Bağlantı ışığını yakalım
-          if (el('connDot')) el('connDot').className = 'dot on';
-          if (el('connText')) el('connText').textContent = 'Bağlantı: Canlı (Firebase)';
-
-          const values = {
-            sic: row.sicaklik || 0, // Arduino'daki değişken ismi 'sicaklik' olmalı
-            nem: row.nem || 0,
-            pot: row.pot || 0,
-            pump: row.pump || 0
-          };
-
-          handleParsedValues(values);
-        }
-      }, (error) => {
-        // Hata durumunda alert ver
-        alert("Firebase Veri Çekme Hatası: " + error.message);
-        if (el('connDot')) el('connDot').className = 'dot';
-        if (el('connText')) el('connText').textContent = 'Bağlantı Hatası';
-      });
-    }
-
-    // -----------------------------
-    // Veri İşleme
-    // -----------------------------
-    function handleParsedValues(values){
-      // Sıcaklık Kartı Güncelleme
-      if(values.sic !== undefined){
-        el('tempText').textContent = values.sic.toFixed(1)+'°C';
-        if(values.sic < 15){ 
-          el('tempCard').className = 'card rounded-2xl p-6 temp-cold'; 
-          el('tempStatus').textContent = 'Soğuk'; 
-        }
-        else if(values.sic > 27){ 
-          el('tempCard').className = 'card rounded-2xl p-6 temp-warm'; 
-          el('tempStatus').textContent = 'Sıcak'; 
-        }
-        else{ 
-          el('tempCard').className = 'card rounded-2xl p-6 temp-normal'; 
-          el('tempStatus').textContent = 'Normal'; 
-        }
-      }
-
-      // Nem, Pot ve Pompa Güncelleme
-      el('soilText').textContent = values.nem + '%';
-      el('soilBar').style.width = values.nem + '%';
-      el('potText').textContent = values.pot;
-      el('potBar').style.width = (values.pot / 1023 * 100) + '%';
-      el('pumpText').textContent = values.pump ? 'Pompa Açık' : 'Pompa Kapalı';
-      el('pumpDot').className = values.pump ? 'dot on' : 'dot';
-
-      // Geçmişe ekle ve grafiği güncelle
-      sensorHistory.push({ sic: values.sic, nem: values.nem, pot: values.pot });
-      if(sensorHistory.length > MAX_RAM_POINTS) sensorHistory.shift();
-      updateChart();
-
-      // Son güncelleme zamanı
-      el('lastUpdate').textContent = new Date().toLocaleTimeString();
-    }
-
-    // -----------------------------
-    // Tema Değiştirme
-    // -----------------------------
-    el('themeBtn').addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      el('themeBtn').textContent = document.body.classList.contains('dark') ? 'Açık Tema' : 'Koyu Tema';
-      applyChartTheme();
     });
 
-    // -----------------------------
-    // Başlat
-    // -----------------------------
-    initChart();
-    startRealtimeUpdates(); // setInterval yerine Firebase'in canlı dinleyicisini kullanıyoruz
+    let dataCounter = 0;
+
+    // Firebase Canlı Dinleme
+    database.ref('/veriler').on('value', (snapshot) => {
+      const val = snapshot.val();
+      if (!val) return;
+
+      dataCounter++;
+      document.getElementById('connDot').className = 'pump-dot on';
+      document.getElementById('connText').textContent = 'Live';
+      document.getElementById('f-conn').textContent = 'Firebase Canlı';
+      document.getElementById('f-count').textContent = dataCounter;
+      document.getElementById('f-time').textContent = new Date().toLocaleTimeString();
+
+      // 4 Saksı Güncelleme Döngüsü
+      for (let i = 1; i <= 4; i++) {
+        const nem = val[`nem${i}`] || 0;
+        const pump = val[`pompa${i}`] || 0;
+
+        // UI Güncelle
+        document.getElementById(`n${i}-text`).textContent = nem + '%';
+        document.getElementById(`n${i}-bar`).style.width = nem + '%';
+        document.getElementById(`p${i}-dot`).className = pump ? 'pump-dot on' : 'pump-dot';
+
+        // Grafik Güncelle
+        const chart = charts[`chart${i}`];
+        chart.data.datasets[0].data.push(nem);
+        if (chart.data.datasets[0].data.length > 15) chart.data.datasets[0].data.shift();
+        chart.update('none');
+      }
+    });
   </script>
-  </body>
+</body>
 </html>
