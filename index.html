@@ -7,12 +7,11 @@
 
   <!-- Tailwind (zorunlu) -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-
+  <!-- FireBase (zorunlu) -->
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
@@ -127,7 +126,7 @@
     <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
       <div>
         <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Arduino Sensör Dashboardu</h1>
-        <p class="muted mt-1 text-sm">Seri porttan gelen veriler SupaBase'de tutulur, son ölçümler grafikte gösterilir.</p>
+        <p class="muted mt-1 text-sm">Seri porttan gelen veriler FİreBase'de tutulur, son ölçümler grafikte gösterilir.</p>
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
@@ -258,22 +257,20 @@
 
   <script>
     // -----------------------------
-    // Supabase Ayarları
+    // Firebase Ayarları
     // -----------------------------
-    const supabaseUrl = "https://khaaelquexhoxwqbnhjs.supabase.co";
-    const supabaseKey = "sb_publishable_w7s6RByp1vSE0gx-KnFLww_vY-78-qZ";
-    const db = supabase.createClient(supabaseUrl, supabaseKey);
-    async function fetchTotalCount() {
-      let { count, error } = await db
-        .from("bilsem")
-        .select("*", { count: "exact", head: true });
+    const firebaseConfig = {
+      databaseURL: "https://bilsem1717-60b7a-default-rtdb.europe-west1.firebasedatabase.app"
+    };
 
-      if (!error) totalSupabaseCount = count;
-}
-    setInterval(fetchTotalCount, 5000);
-    fetchTotalCount();
+    // Firebase Başlatma ve Hata Kontrolü
+    try {
+      firebase.initializeApp(firebaseConfig);
+    } catch (err) {
+      alert("Firebase Başlatılamadı! Hata: " + err.message);
+    }
 
-
+    const database = firebase.database();
 
     // -----------------------------
     // Temel Ayarlar
@@ -281,14 +278,15 @@
     const CHART_VISIBLE_POINTS = 20;
     const MAX_RAM_POINTS = 50000;
 
-    let demoTimer = null;
     let sensorHistory = [];
     let chart = null;
+    let totalDataCount = 0; // Eskiden totalSupabaseCount idi
 
     const el = (id) => document.getElementById(id);
 
-    el('visiblePoints').textContent = CHART_VISIBLE_POINTS;
-    el('maxRam').textContent = MAX_RAM_POINTS;
+    // Dashboard üzerindeki sabitleri yazdıralım
+    if (el('visiblePoints')) el('visiblePoints').textContent = CHART_VISIBLE_POINTS;
+    if (el('maxRam')) el('maxRam').textContent = MAX_RAM_POINTS;
 
     // -----------------------------
     // Chart Başlangıç
@@ -323,8 +321,8 @@
           scales: {
             x: { ticks: { color: t.tick }, grid: { color: t.grid }, title: { display: true, text: 'Zaman', color: t.tick } },
             yTemp: { position: 'left', ticks: { color: t.tick }, grid: { color: t.grid }, title: { display: true, text: '°C', color: t.tick } },
-            yHum: { position: 'right', min:0,max:100, ticks: { color: t.tick }, grid: { drawOnChartArea:false }, title: { display:true, text:'%', color:t.tick } },
-            yPot: { position: 'right', min:0,max:1023, offset:true, ticks:{color:t.tick}, grid:{drawOnChartArea:false}, title:{display:true,text:'0-1023',color:t.tick} }
+            yHum: { position: 'right', min:0, max:100, ticks: { color: t.tick }, grid: { drawOnChartArea:false }, title: { display:true, text:'%', color:t.tick } },
+            yPot: { position: 'right', min:0, max:1023, offset:true, ticks:{color:t.tick}, grid:{drawOnChartArea:false}, title:{display:true, text:'0-1023', color:t.tick} }
           }
         }
       });
@@ -346,95 +344,106 @@
       chart.options.scales.yPot.title.color = t.tick;
       chart.update('none');
     }
-    let totalSupabaseCount = 0;
 
     function updateChart() {
       if (!chart) return;
       const latest = sensorHistory.slice(-CHART_VISIBLE_POINTS);
-      chart.data.labels = latest.map((_,i)=>'');
-      chart.data.datasets[0].data = latest.map(d=>d.sic);
-      chart.data.datasets[1].data = latest.map(d=>d.nem);
-      chart.data.datasets[2].data = latest.map(d=>d.pot);
+      chart.data.labels = latest.map((_,i) => '');
+      chart.data.datasets[0].data = latest.map(d => d.sic);
+      chart.data.datasets[1].data = latest.map(d => d.nem);
+      chart.data.datasets[2].data = latest.map(d => d.pot);
       chart.update('none');
-      el('visibleCount').textContent = latest.length;
-      el('ramCount').textContent = totalSupabaseCount;
+      
+      if (el('visibleCount')) el('visibleCount').textContent = latest.length;
+      if (el('ramCount')) el('ramCount').textContent = totalDataCount;
     }
 
-// -----------------------------
-// Supabase Tüm Verileri Çekme
-// -----------------------------
-async function fetchTemperature() {
-  let { data, error } = await db
-    .from('bilsem')
-    .select('heat, nem, pot, pump')
-    .order('id', { ascending: false })
-    .limit(1);
+    // -----------------------------
+    // Firebase Canlı Veri Çekme (Realtime)
+    // -----------------------------
+    function startRealtimeUpdates() {
+      // '/veriler' düğümünü canlı olarak dinliyoruz
+      const dataRef = database.ref('/veriler');
+      
+      dataRef.on('value', (snapshot) => {
+        const row = snapshot.val();
+        
+        if (row) {
+          totalDataCount++; // Her yeni veri geldiğinde sayacı artır (tablo işlevi için)
+          
+          // Bağlantı ışığını yakalım
+          if (el('connDot')) el('connDot').className = 'dot on';
+          if (el('connText')) el('connText').textContent = 'Bağlantı: Canlı (Firebase)';
 
-  if (error) {
-    console.log('Supabase Hata:', error);
-    return;
-  }
+          const values = {
+            sic: row.sicaklik || 0, // Arduino'daki değişken ismi 'sicaklik' olmalı
+            nem: row.nem || 0,
+            pot: row.pot || 0,
+            pump: row.pump || 0
+          };
 
-  if (data && data.length > 0) {
-    const row = data[0];
-
-    const values = {
-      sic: row.heat,   // sıcaklık
-      nem: row.nem,    // toprak nemi
-      pot: row.pot,    // potansiyometre
-      pump: row.pump   // pompa açık/kapalı
-    };
-
-    handleParsedValues(values);
-  }
-}
+          handleParsedValues(values);
+        }
+      }, (error) => {
+        // Hata durumunda alert ver
+        alert("Firebase Veri Çekme Hatası: " + error.message);
+        if (el('connDot')) el('connDot').className = 'dot';
+        if (el('connText')) el('connText').textContent = 'Bağlantı Hatası';
+      });
+    }
 
     // -----------------------------
-    // Demo/Seri veri işleme (diğerleri)
+    // Veri İşleme
     // -----------------------------
     function handleParsedValues(values){
-      // Sıcaklık Supabase’den
+      // Sıcaklık Kartı Güncelleme
       if(values.sic !== undefined){
         el('tempText').textContent = values.sic.toFixed(1)+'°C';
-        if(values.sic<15){ el('tempCard').className='card rounded-2xl p-6 temp-cold'; el('tempStatus').textContent='Soğuk'; }
-        else if(values.sic>27){ el('tempCard').className='card rounded-2xl p-6 temp-warm'; el('tempStatus').textContent='Sıcak'; }
-        else{ el('tempCard').className='card rounded-2xl p-6 temp-normal'; el('tempStatus').textContent='Normal'; }
+        if(values.sic < 15){ 
+          el('tempCard').className = 'card rounded-2xl p-6 temp-cold'; 
+          el('tempStatus').textContent = 'Soğuk'; 
+        }
+        else if(values.sic > 27){ 
+          el('tempCard').className = 'card rounded-2xl p-6 temp-warm'; 
+          el('tempStatus').textContent = 'Sıcak'; 
+        }
+        else{ 
+          el('tempCard').className = 'card rounded-2xl p-6 temp-normal'; 
+          el('tempStatus').textContent = 'Normal'; 
+        }
       }
 
-      // Diğer demo değerler (nem, pot, pump)
-      if(values.nem===undefined){ values.nem=Math.floor(Math.random()*100); }
-      if(values.pot===undefined){ values.pot=Math.floor(Math.random()*1024); }
-      if(values.pump===undefined){ values.pump=Math.round(Math.random()); }
-
-      el('soilText').textContent = values.nem+'%';
-      el('soilBar').style.width = values.nem+'%';
+      // Nem, Pot ve Pompa Güncelleme
+      el('soilText').textContent = values.nem + '%';
+      el('soilBar').style.width = values.nem + '%';
       el('potText').textContent = values.pot;
-      el('potBar').style.width = (values.pot/1023*100)+'%';
-      el('pumpText').textContent = values.pump?'Pompa Açık':'Pompa Kapalı';
-      el('pumpDot').className = values.pump?'dot on':'dot';
+      el('potBar').style.width = (values.pot / 1023 * 100) + '%';
+      el('pumpText').textContent = values.pump ? 'Pompa Açık' : 'Pompa Kapalı';
+      el('pumpDot').className = values.pump ? 'dot on' : 'dot';
 
-      // RAM ve chart
+      // Geçmişe ekle ve grafiği güncelle
       sensorHistory.push({ sic: values.sic, nem: values.nem, pot: values.pot });
-      if(sensorHistory.length>MAX_RAM_POINTS) sensorHistory.shift();
+      if(sensorHistory.length > MAX_RAM_POINTS) sensorHistory.shift();
       updateChart();
 
-      // Son güncelleme
+      // Son güncelleme zamanı
       el('lastUpdate').textContent = new Date().toLocaleTimeString();
     }
+
     // -----------------------------
-    // Temayı değiştir
+    // Tema Değiştirme
     // -----------------------------
-    el('themeBtn').addEventListener('click',()=>{
+    el('themeBtn').addEventListener('click', () => {
       document.body.classList.toggle('dark');
-      el('themeBtn').textContent = document.body.classList.contains('dark')?'Açık Tema':'Koyu Tema';
+      el('themeBtn').textContent = document.body.classList.contains('dark') ? 'Açık Tema' : 'Koyu Tema';
       applyChartTheme();
     });
+
     // -----------------------------
-    // Init
+    // Başlat
     // -----------------------------
     initChart();
-    fetchTemperature();
-    setInterval(fetchTemperature, 5000); // her 5 saniye
+    startRealtimeUpdates(); // setInterval yerine Firebase'in canlı dinleyicisini kullanıyoruz
   </script>
-</body>
+  </body>
 </html>
