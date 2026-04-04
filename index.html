@@ -3,234 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gezgin A.Ş. — Akıllı Sera Dashboard</title>
+    <title>Gezgin A.Ş. — Debug Mode</title>
     
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <style>
         :root {
             --primary: #ff8800;
-            --primary-glow: rgba(255, 136, 0, 0.6);
+            --primary-glow: rgba(255, 136, 0, 0.4);
             --bg: #050505;
-            --card: rgba(20, 20, 20, 0.6);
+            --card: rgba(255, 255, 255, 0.03);
             --text: #ddd;
             --border: #222;
-            --grid-color: rgba(255, 255, 255, 0.03);
-            --header-bg: #000;
         }
-
-        body.light-mode {
-            --bg: #f0f2f5;
-            --card: rgba(255, 255, 255, 0.9);
-            --text: #333;
-            --border: #ddd;
-            --grid-color: rgba(0, 0, 0, 0.05);
-            --header-bg: #fff;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             background-color: var(--bg);
-            background-image: 
-                linear-gradient(var(--grid-color) 1px, transparent 1px),
-                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
             background-size: 40px 40px;
             font-family: 'Segoe UI', sans-serif;
             color: var(--text);
-            min-height: 100vh;
+            margin: 0; padding: 20px;
+            padding-bottom: 150px;
         }
 
-        .top-header {
-            width: 100%; height: 60px;
-            background: var(--header-bg);
-            border-bottom: 2px solid var(--border);
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 20px; position: sticky; top: 0; z-index: 1000;
-        }
-
-        .logo { color: var(--primary); font-weight: bold; font-size: 20px; letter-spacing: 2px; text-shadow: 0 0 10px var(--primary-glow); }
-
-        .btn {
-            padding: 6px 12px; font-size: 10px; border: 1px solid var(--primary);
-            background: transparent; color: var(--primary); cursor: pointer;
-            font-weight: bold; border-radius: 12px; transition: 0.3s;
-        }
-        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 10px var(--primary-glow); }
-
-        /* 2x2 DÜZENİ İÇİN WRAPPER */
         .main-wrapper {
             display: grid;
-            grid-template-columns: repeat(2, 1fr); /* Tam 2 sütun */
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
-            padding: 20px;
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
         }
 
         .container {
             background: var(--card);
             border: 2px solid var(--border);
-            padding: 15px;
+            padding: 20px;
             border-radius: 12px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+            transition: 0.3s;
+            position: relative;
+            min-height: 220px; /* Kartın çökmemesi için */
         }
 
-        /* LGS.OS HOVER PARLAMASI */
         .container:hover {
             border-color: var(--primary);
-            box-shadow: 0 0 15px var(--primary-glow), inset 0 0 10px var(--primary-glow);
+            box-shadow: 0 0 15px var(--primary-glow);
         }
 
-        .saksi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .saksi-name { font-size: 11px; font-weight: bold; color: var(--text); opacity: 0.7; letter-spacing: 1px; }
+        .nem-value { font-size: 42px; font-weight: bold; color: #fff; margin-bottom: 10px; }
         
-        .nem-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-        .nem-value { font-size: 36px; font-weight: bold; color: var(--text); } /* Neon yok, sade */
-        .nem-label { font-size: 12px; color: var(--primary); font-weight: bold; }
-
-        .pump-status { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: bold; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #333; }
-        .dot.active { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
-
-        .chart-box { height: 100px; width: 100%; margin-top: 10px; }
-
-        /* FOOTER */
-        .status-footer-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: var(--card); border-top: 2px solid var(--border);
-            padding: 12px 20px; display: flex; justify-content: center; gap: 30px;
-            font-size: 10px; font-weight: bold; letter-spacing: 1px;
+        /* GRAFİK ALANI - KRİTİK NOKTA */
+        .chart-box { 
+            position: relative; 
+            height: 120px; 
+            width: 100%; 
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px dashed #333;
         }
-        .footer-item span { color: var(--primary); }
 
-        @media (max-width: 700px) { .main-wrapper { grid-template-columns: 1fr; } }
+        /* DEBUG PENCERESİ */
+        #debug-console {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 100px;
+            background: #000; color: #0f0; font-family: monospace; font-size: 10px;
+            padding: 10px; overflow-y: auto; border-top: 2px solid #333; z-index: 9999;
+        }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: #333; }
+        .active { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
     </style>
 </head>
 <body>
 
-    <header class="top-header">
-        <div class="logo">⚡ GEZGİN A.Ş.</div>
-        <div style="display:flex; gap:10px;">
-            <button class="btn" onclick="document.body.classList.toggle('light-mode')">TEMA</button>
-            <div class="btn" id="conn-stat">ÇEVRİMDIŞI</div>
-        </div>
-    </header>
+    <div style="text-align:center; margin-bottom:20px;">
+        <h2 style="color:var(--primary)">⚡ GEZGİN A.Ş. DASHBOARD</h2>
+        <p style="font-size:10px; opacity:0.5;">LGS.OS THEME V2.1 - DEBUG ACTIVE</p>
+    </div>
 
     <div class="main-wrapper">
         <div class="container">
-            <div class="saksi-header">
-                <div class="saksi-name">UNIT_01</div>
-                <div class="pump-status">PUMP <div id="p1-dot" class="dot"></div></div>
-            </div>
-            <div class="nem-row">
-                <div class="nem-value" id="n1-text">0</div>
-                <div class="nem-label">% NEM</div>
-            </div>
-            <div class="chart-box"><canvas id="chart1"></canvas></div>
+            <div style="display:flex; justify-content:space-between;"><span>UNIT_01</span> <div id="p1" class="dot"></div></div>
+            <div class="nem-value"><span id="n1">0</span><small style="font-size:14px">%</small></div>
+            <div class="chart-box"><canvas id="c1"></canvas></div>
         </div>
-
         <div class="container">
-            <div class="saksi-header">
-                <div class="saksi-name">UNIT_02</div>
-                <div class="pump-status">PUMP <div id="p2-dot" class="dot"></div></div>
-            </div>
-            <div class="nem-row">
-                <div class="nem-value" id="n2-text">0</div>
-                <div class="nem-label">% NEM</div>
-            </div>
-            <div class="chart-box"><canvas id="chart2"></canvas></div>
+            <div style="display:flex; justify-content:space-between;"><span>UNIT_02</span> <div id="p2" class="dot"></div></div>
+            <div class="nem-value"><span id="n2">0</span><small style="font-size:14px">%</small></div>
+            <div class="chart-box"><canvas id="c2"></canvas></div>
         </div>
-
         <div class="container">
-            <div class="saksi-header">
-                <div class="saksi-name">UNIT_03</div>
-                <div class="pump-status">PUMP <div id="p3-dot" class="dot"></div></div>
-            </div>
-            <div class="nem-row">
-                <div class="nem-value" id="n3-text">0</div>
-                <div class="nem-label">% NEM</div>
-            </div>
-            <div class="chart-box"><canvas id="chart3"></canvas></div>
+            <div style="display:flex; justify-content:space-between;"><span>UNIT_03</span> <div id="p3" class="dot"></div></div>
+            <div class="nem-value"><span id="n3">0</span><small style="font-size:14px">%</small></div>
+            <div class="chart-box"><canvas id="c3"></canvas></div>
         </div>
-
         <div class="container">
-            <div class="saksi-header">
-                <div class="saksi-name">UNIT_04</div>
-                <div class="pump-status">PUMP <div id="p4-dot" class="dot"></div></div>
-            </div>
-            <div class="nem-row">
-                <div class="nem-value" id="n4-text">0</div>
-                <div class="nem-label">% NEM</div>
-            </div>
-            <div class="chart-box"><canvas id="chart4"></canvas></div>
+            <div style="display:flex; justify-content:space-between;"><span>UNIT_04</span> <div id="p4" class="dot"></div></div>
+            <div class="nem-value"><span id="n4">0</span><small style="font-size:14px">%</small></div>
+            <div class="chart-box"><canvas id="c4"></canvas></div>
         </div>
     </div>
 
-    <footer class="status-footer-bar">
-        <div class="footer-item">STATUS: <span id="f-stat">IDLE</span></div>
-        <div class="footer-item">DATA: <span id="f-count">0</span></div>
-        <div class="footer-item">SYNC: <span id="f-time">--:--</span></div>
-        <div class="footer-item">CORE: <span>LGS.OS_V2</span></div>
-    </footer>
+    <div id="debug-console">--- SISTEM BASLATILDI ---<br></div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://bilsem1717-60b7a-default-rtdb.europe-west1.firebasedatabase.app" };
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        const charts = {};
-        const createChart = (id) => {
-            const ctx = document.getElementById(id).getContext('2d');
-            return new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array(15).fill(''),
-                    datasets: [{
-                        data: [],
-                        borderColor: '#ff8800',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: true,
-                        backgroundColor: 'rgba(255, 136, 0, 0.1)'
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { display: false }, y: { min: 0, max: 100, display: false } }
-                }
-            });
+        const logger = (msg) => {
+            const div = document.getElementById('debug-console');
+            div.innerHTML += `> ${new Date().toLocaleTimeString()}: ${msg}<br>`;
+            div.scrollTop = div.scrollHeight;
         };
 
-        ['chart1', 'chart2', 'chart3', 'chart4'].forEach(id => charts[id] = createChart(id));
+        try {
+            const firebaseConfig = { databaseURL: "https://bilsem1717-60b7a-default-rtdb.europe-west1.firebasedatabase.app" };
+            firebase.initializeApp(firebaseConfig);
+            logger("Firebase Baglantisi Kuruldu.");
+        } catch(e) { logger("FIREBASE HATASI: " + e.message); }
 
-        let count = 0;
-        database.ref('/veriler').on('value', (snap) => {
-            const val = snap.val();
-            if(!val) return;
-            count++;
+        const charts = {};
+        const setupChart = (id) => {
+            try {
+                const ctx = document.getElementById(id);
+                if(!ctx) { logger(`Hata: ${id} canvas bulunamadi!`); return; }
+                
+                charts[id] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array(20).fill(''),
+                        datasets: [{
+                            data: [],
+                            borderColor: '#ff8800',
+                            backgroundColor: 'rgba(255, 136, 0, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } }
+                    }
+                });
+                logger(`Grafik ${id} basariyla olusturuldu.`);
+            } catch(e) { logger(`GRAFIK HATASI (${id}): ` + e.message); }
+        };
+
+        // Grafikleri Baslat
+        ['c1', 'c2', 'c3', 'c4'].forEach(id => setupChart(id));
+
+        firebase.database().ref('/veriler').on('value', (snap) => {
+            const data = snap.val();
+            if(!data) { logger("Veritabanindan bos veri dondu!"); return; }
             
-            document.getElementById('f-count').innerText = count;
-            document.getElementById('f-time').innerText = new Date().toLocaleTimeString();
-            document.getElementById('conn-stat').innerText = "CANLI";
-            document.getElementById('f-stat').innerText = "RECEIVING";
+            logger("Veri alindi: " + JSON.stringify(data));
 
             for(let i=1; i<=4; i++) {
-                const nem = val[`nem${i}`] || 0;
-                const pump = val[`pompa${i}`] || 0;
+                const nem = data[`nem${i}`] || 0;
+                const pompa = data[`pompa${i}`] || 0;
 
-                document.getElementById(`n${i}-text`).innerText = nem;
-                document.getElementById(`p${i}-dot`).className = pump ? 'dot active' : 'dot';
+                // Arayuz Guncelle
+                document.getElementById(`n${i}`).innerText = nem;
+                document.getElementById(`p${i}`).className = pompa == 1 ? 'dot active' : 'dot';
 
-                const chart = charts[`chart${i}`];
-                chart.data.datasets[0].data.push(nem);
-                if(chart.data.datasets[0].data.length > 15) chart.data.datasets[0].data.shift();
-                chart.update();
+                // Grafik Guncelle
+                const chart = charts[`c${i}`];
+                if(chart) {
+                    chart.data.datasets[0].data.push(nem);
+                    if(chart.data.datasets[0].data.length > 20) chart.data.datasets[0].data.shift();
+                    chart.update('none'); // Performans icin animasyonsuz guncelle
+                } else {
+                    logger(`Hata: charts['c${i}'] objesi bulunamadi!`);
+                }
             }
         });
     </script>
