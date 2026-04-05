@@ -13,6 +13,7 @@
             --bg: #050505; --text: #ffffff; --border: rgba(255,255,255,0.1);
             --card-bg: rgba(20, 20, 20, 0.7);
             --c1: #00d2ff; --c2: #9d50bb; --c3: #00ff88; --c4: #ff3333;
+            --c-temp: #ff8800; --c-hum: #00aaff;
         }
 
         body.light-mode {
@@ -45,6 +46,16 @@
         }
 
         .main-container { max-width: 1200px; margin: 0 auto; padding: 25px; }
+        
+        .top-card {
+            background: var(--card-bg); border: 2px solid var(--border);
+            border-radius: 20px; padding: 20px; margin-bottom: 20px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+        .top-card:hover { border-color: rgba(255, 255, 255, 0.3); box-shadow: 0 0 30px rgba(255, 255, 255, 0.1); transform: translateY(-5px); }
+
         .grid-2x2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 
         /* KARTLAR VE HOVER EFEKTLERİ */
@@ -86,6 +97,7 @@
 
         @media (max-width: 768px) { 
             .grid-2x2 { grid-template-columns: 1fr; }
+            .top-card { grid-template-columns: 1fr; gap: 20px; }
             .nem-val { font-size: 42px; }
             .header h2 { font-size: 16px; }
         }
@@ -103,6 +115,26 @@
     </div>
 
     <div class="main-container">
+        <div class="top-card">
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; opacity:0.8;"><span>GENEL ORTAM</span> <span>SICAKLIK</span></div>
+                <div class="main-data">
+                    <div class="nem-val" id="n-temp">0</div><small style="color:var(--c-temp); font-weight:bold;">°C</small>
+                    <div class="nem-bar-bg"><div id="b-temp" class="nem-bar-fill" style="background:var(--c-temp)"></div></div>
+                </div>
+                <div class="chart-container" id="c-temp"></div>
+            </div>
+            
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; opacity:0.8;"><span>GENEL ORTAM</span> <span>HAVA NEMİ</span></div>
+                <div class="main-data">
+                    <div class="nem-val" id="n-hum">0</div><small style="color:var(--c-hum); font-weight:bold;">%</small>
+                    <div class="nem-bar-bg"><div id="b-hum" class="nem-bar-fill" style="background:var(--c-hum)"></div></div>
+                </div>
+                <div class="chart-container" id="c-hum"></div>
+            </div>
+        </div>
+
         <div class="grid-2x2">
             <div class="card card-1">
                 <div style="display:flex; justify-content:space-between; font-size:12px; opacity:0.8;"><span>ÜNİTE_01</span> <span>SU AKTARIMI <div id="p1" class="dot" style="display:inline-block; width:8px; height:8px;"></div></span></div>
@@ -149,25 +181,30 @@
             if (!container) return;
             const bar = document.createElement('div');
             bar.className = 'chart-bar';
-            bar.style.height = veri + '%';
+            // Yüzde 100'ü aşmasını engellemek için sınır koyuyoruz
+            let barHeight = veri > 100 ? 100 : veri;
+            bar.style.height = barHeight + '%';
             bar.style.backgroundColor = renk;
             bar.style.boxShadow = `0 0 10px ${renk}55`;
             container.appendChild(bar);
             if (container.children.length > maxNokta) container.removeChild(container.firstChild);
         }
 
-        // BAŞLANGIÇTA 4 SÜTUN OLUŞTURMA
+        // BAŞLANGIÇTA GRAFİK SÜTUNLARINI OLUŞTURMA (Tüm Kartlar İçin)
         document.addEventListener("DOMContentLoaded", () => {
-            for(let i=1; i<=4; i++) {
-                const container = document.getElementById(`c${i}`);
-                for(let j=0; j<4; j++) {
-                    const placeholder = document.createElement('div');
-                    placeholder.className = 'chart-bar';
-                    placeholder.style.height = '15%'; 
-                    placeholder.style.backgroundColor = 'rgba(128,128,128,0.1)';
-                    container.appendChild(placeholder);
+            const tumGrafikler = ['c1', 'c2', 'c3', 'c4', 'c-temp', 'c-hum'];
+            tumGrafikler.forEach(id => {
+                const container = document.getElementById(id);
+                if (container) {
+                    for(let j=0; j<4; j++) {
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'chart-bar';
+                        placeholder.style.height = '15%'; 
+                        placeholder.style.backgroundColor = 'rgba(128,128,128,0.1)';
+                        container.appendChild(placeholder);
+                    }
                 }
-            }
+            });
         });
 
         let paketSayici = 0;
@@ -178,12 +215,25 @@
             document.getElementById('main-text').innerText = 'BAĞLANDI';
             document.getElementById('f-paket').innerText = paketSayici;
 
+            // Ortam Sıcaklık ve Nem Güncellemesi
+            const sicaklik = d.sicaklik || 0;
+            const havaNemi = d.havanemi || 0;
+            
+            document.getElementById('n-temp').innerText = sicaklik;
+            document.getElementById('b-temp').style.height = (sicaklik > 100 ? 100 : sicaklik) + '%';
+            grafikGuncelle('c-temp', sicaklik, 'var(--c-temp)');
+
+            document.getElementById('n-hum').innerText = havaNemi;
+            document.getElementById('b-hum').style.height = (havaNemi > 100 ? 100 : havaNemi) + '%';
+            grafikGuncelle('c-hum', havaNemi, 'var(--c-hum)');
+
+            // 4 Ünite Güncellemesi
             for(let i=1; i<=4; i++) {
                 const n = d[`nem${i}`] || 0;
                 const p = d[`pompa${i}`] || 0;
                 document.getElementById(`n${i}`).innerText = n;
                 document.getElementById(`p${i}`).className = p == 1 ? 'dot online' : 'dot';
-                document.getElementById(`b${i}`).style.height = n + '%';
+                document.getElementById(`b${i}`).style.height = (n > 100 ? 100 : n) + '%';
                 grafikGuncelle(`c${i}`, n, renkler[i-1]);
             }
         });
